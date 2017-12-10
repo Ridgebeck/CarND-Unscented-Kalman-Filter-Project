@@ -13,7 +13,8 @@ using std::vector;
  * Initializes Unscented Kalman filter
  * This is scaffolding, do not modify
  */
-UKF::UKF() {
+UKF::UKF()
+{
   // if this is false, laser measurements will be ignored (except during init)
   use_laser_ = true;
 
@@ -108,7 +109,8 @@ void UKF::NormalizeAngle(double *ang)
 }
 
 
-void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
+void UKF::ProcessMeasurement(MeasurementPackage meas_package)
+{
   /**
   TODO:
 
@@ -197,7 +199,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  * @param {double} delta_t the change in time (in seconds) between the last
  * measurement and this one.
  */
-void UKF::Prediction(double delta_t) {
+void UKF::Prediction(double delta_t)
+{
   /**
   TODO:
 
@@ -288,7 +291,7 @@ void UKF::Prediction(double delta_t) {
     yaw_p  += 0.5 * nu_yawdd * delta_t2;
     yawd_p += nu_yawdd * delta_t;
 
-    // Write predicted sigma points into right column
+    // write predicted sigma points into right column
     Xsig_pred_(0,i) = px_p;
     Xsig_pred_(1,i) = py_p;
     Xsig_pred_(2,i) = v_p;
@@ -318,7 +321,8 @@ void UKF::Prediction(double delta_t) {
  * Updates the state and the state covariance matrix using a laser measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateLidar(MeasurementPackage meas_package) {
+void UKF::UpdateLidar(MeasurementPackage meas_package)
+{
   /**
   TODO:
 
@@ -327,14 +331,25 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
-  std::cout << "update step lidar" << endl;
+  
+  //std::cout << "update step lidar" << endl;
+
+  // measurement dimensions (px, py)
+  int n_z = 2;
+
+  // create matrix for sigma points in measurement space
+  MatrixXd Zsig = Xsig_pred_.block(0, 0, n_z, n_sig_);
+
+  // update UKF with measurement data
+  UpdateUKF(meas_package, Zsig, n_z);
 }
 
 /**
  * Updates the state and the state covariance matrix using a radar measurement.
  * @param {MeasurementPackage} meas_package
  */
-void UKF::UpdateRadar(MeasurementPackage meas_package) {
+void UKF::UpdateRadar(MeasurementPackage meas_package)
+{
   /**
   TODO:
 
@@ -344,6 +359,41 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   You'll also need to calculate the radar NIS.
   */
 
-  std::cout << "update step radar" << endl;
+  //std::cout << "update step radar" << endl;
+
+
+  // measurement dimension (r, phi, and r_dot)
+  int n_z = 3;
+
+  // create matrix for sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, n_sig_);
+
+  // Transform sigma points into measurement space
+  for (int i = 0; i < n_sig_; i++)
+  {
+    // save values in variables for clarity
+    double p_x = Xsig_pred_(0,i);
+    double p_y = Xsig_pred_(1,i);
+    double v   = Xsig_pred_(2,i);
+    double yaw = Xsig_pred_(3,i);
+    double v1  = cos(yaw)*v;
+    double v2  = sin(yaw)*v;
+
+    // Measurement model
+    // r
+    Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);
+    // phi
+    Zsig(1,i) = atan2(p_y,p_x);
+    // r_dot
+    Zsig(2,i) = (p_x*v1 + p_y*v2 ) / Zsig(0,i);
+  }
+
+  // update UKF with measurement data
+  UpdateUKF(meas_package, Zsig, n_z);
+}
+
+// update function
+void UKF::UpdateUKF(MeasurementPackage meas_package, MatrixXd Zsig, int n_z)
+{
 
 }
